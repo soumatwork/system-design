@@ -37,6 +37,7 @@ class VendingMachineSystem {
 
 	public Payment checkout(List<CheckoutRequest> checkoutRequests, PaymentMethod paymentMethod) {
 		List<Product> productsToCheckout = new ArrayList<>();
+		
 		for (CheckoutRequest checkoutRequest : checkoutRequests) {
 			if (products.get(checkoutRequest.code).size() >= checkoutRequest.quantity) {
 				productsToCheckout.addAll(products.get(checkoutRequest.code));
