@@ -3,6 +3,7 @@ class VendingMachineSystem {
 	int maxCodes;
 	int maxProductForEachCode;
 	Map<String, Queue<Product>> slots = new HashMap<>();
+	List<CheckoutRequest> userQueue = new ArrayList<>();
 	
 	public VendingMachineSystem(int maxCodes, int maxProductForEachCode) {
 		this.maxCodes = maxCodes;
@@ -39,21 +40,41 @@ class VendingMachineSystem {
 		return 0.0;
 	}
 
-	public List<Product> checkout(CheckoutRequest checkoutRequest, PaymentMethod paymentMethod) {
-		if (slots.get(checkoutRequest.code).size() < checkoutRequest.quantity) {
-			return null;
+	public boolean select(String code, String quantity) {
+		if (slots.get(code).size() < quantity) {
+			return false;
+		}
+		userQueue.add(new CheckoutRequest(code, quantity));
+		return true;
+	}
+	
+	public List<Product> checkout(PaymentMethod paymentMethod) {
+		checkout(userQueue, paymentMethod);
+	}
+	
+	private List<Product> checkout(List<CheckoutRequest> checkouts, PaymentMethod paymentMethod) {
+		List<PaymentRequest> payments = new ArrayList<>();
+		
+		for(CheckoutRequest checkoutRequest : checkouts) {
+			if (slots.get(checkoutRequest.code).size() < checkoutRequest.quantity) {
+				return new ArrayList<>();
+			}
+			payments.add(new PaymentRequest(price(checkoutRequest.code), checkoutRequest.quantity));
 		}
 
-		boolean result = paymentMethod.checkout(price(checkoutRequest.code), checkoutRequest.quantity);
+		boolean result = paymentMethod.checkout(payments);
 		
 		List<Product> products = new ArrayList<>();
 		
-		if (result) {			
-			for (int i = 0; i < checkoutRequest.quantity; i++) {
-				products.add(slots.get(checkoutRequest.code).poll());
+		if (result) {
+			for(CheckoutRequest checkoutRequest : checkouts) {
+				for (int i = 0; i < checkoutRequest.quantity; i++) {
+					products.add(slots.get(checkoutRequest.code).poll());
+				}
 			}
 		}
 		
+		userQueue.clear();
 		return products;
 	}
 }
@@ -61,11 +82,26 @@ class VendingMachineSystem {
 class CheckoutRequest {
 	String code;
 	int quantity;
+	
+	public CheckoutRequest(String code, int quantity) {
+		this.code = code;
+		this.quantity = quantity;
+	}
+}
+
+class PaymentRequest {
+	double price;
+	int quantity;
+	
+	public PaymentRequest(double price, int quantity) {
+		this.code = code;
+		this.quantity = quantity;
+	}
 }
 
 // Following are the payment method
 interface PaymentMethod {
-	boolean checkout(double price, int quantity);
+	boolean checkout(List<PaymentRequest> payments);
 }
 
 class CreditCard extends PaymentMethod {
@@ -77,9 +113,17 @@ class CreditCard extends PaymentMethod {
 		this.cardDetails = cardDetails;
 	}
 
-	public boolean checkout(double price, int quantity) {
-		double surcharge = 1.03;
-		double total = price * quantity * surcharge;
+	public boolean checkout(List<PaymentRequest> payments) {
+		double total = 0;
+		
+		for(PaymentRequest payment: payments) {
+			double price = payment.price;
+			double quantity = payment.quantity;
+			
+			double surcharge = 1.03;
+			total += price * quantity * surcharge;		
+		}
+		
 		paymentGateway.makePayment(cardDetails, total);
 		return true;
 	}
@@ -92,14 +136,20 @@ class Cash extends PaymentMethod {
 		this.cash = cash;
 	}
 
-	public boolean checkout(double price, int quantity) {
-		double total = price * quantity;
-		double change = cash - total;
+	public boolean checkout(List<PaymentRequest> payments) {
+		double total = 0;
+		
+		for(PaymentRequest payment: payments) {
+			double price = payment.price;
+			double quantity = payment.quantity;
+			
+			total += price * quantity;
+			double change = cash - total;
 
-		if (change < 0) {
-			return false;
+			if (change < 0) {
+				return false;
+			}
 		}
-
 		return true;
 	}
 }
