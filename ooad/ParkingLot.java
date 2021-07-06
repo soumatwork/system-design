@@ -1,66 +1,118 @@
 class ParkingLot {
-    
-    Map<VehicleType, Stack<Spot>> availableSpots = new HashMap<>();
-    Map<VehicleType, Stack<Spot>> notAvailableSpots = new HashMap<>();
-    
-    Map<String, Integer> availabilityPerFloor = new ConcurrentHashMap<>();
+    Map<Size, Stack<Spot>> stacks = new HashMap<>();
+    Map<String, Spot> spotsInUse = new HashMap<>();
+    Lock lock = new ReentrantLock();
     
     public ParkingLot() {
-        initialiseSpots(spots);
-        initialiseAvailableSpots(availableSlots);
+        initialiseStack(stack);
     }
     
-    public Map<String, Integer> avilableSlots() {
-        return availabilityPerFloor;
+    public Ticket enter(Vehicle vehicle) {
+        lock.lock();
+        try {
+            return enterVehicle(vehicle);
+        } finally {
+            lock.unlock();
+        }
     }
     
-    public Ticket enterVehicle(Vehicle vehicle) {
-        Stack<Spot> stack = availableSpots.get(vehicle.type);
-        
-        if(!stack.isEmpty()) {
-            Spot spot = stack.pop();
-            notAvailableSpots.get(vehicle.type).push(spot);
-            return new Ticket(spot, vehicle.vehicleNumber);
+    private Ticket enterVehicle(Vehicle vehicle) {
+        if(vehicle.size == SMALL) {
+            Stack<Spot> availableSpots = stacks.get(SMALL);
+            
+            if(availableSpots.isEmpty()) {
+              availableSpots = stacks.get(MED);  
+            }
+            if(availableSpots.isEmpty()) {
+              availableSpots = stacks.get(LARGE);  
+            }
+            if(availableSpots.isEmpty()) {
+              availableSpots = stacks.get(XLARGE);  
+            }
+            
+            if(availableSpots.isEmpty()) {
+                return null;    
+            } else {
+                Spot spot = availableSpots.pop();
+                spotsInUse.put(vehicle.vehicleNumber, spot);
+                return new Ticket(spot, vehicle.vehicleNumber);
+            }
+            
+        } else if (vehicle.size == MED) {
+            Stack<Spot> availableSpots = stacks.get(MED);
+            
+            if(availableSpots.isEmpty()) {
+              availableSpots = stacks.get(LARGE);  
+            }
+            if(availableSpots.isEmpty()) {
+              availableSpots = stacks.get(XLARGE);  
+            }
+            
+            if(availableSpots.isEmpty()) {
+                return null;    
+            } else {
+                Spot spot = availableSpots.pop();
+                spotsInUse.put(vehicle.vehicleNumber, spot);
+                return new Ticket(spot, vehicle.vehicleNumber);
+            }
+        } else if (vehicle.size == LARGE) {
+            Stack<Spot> availableSpots = stacks.get(LARGE);
+            
+            if(availableSpots.isEmpty()) {
+              availableSpots = stacks.get(XLARGE);  
+            }
+            
+            if(availableSpots.isEmpty()) {
+                return null;    
+            } else {
+                Spot spot = availableSpots.pop();
+                spotsInUse.put(vehicle.vehicleNumber, spot);
+                return new Ticket(spot, vehicle.vehicleNumber);
+            }
+        } else {
+            Stack<Spot> availableSpots = stacks.get(XLARGE);
+            
+            if(availableSpots.isEmpty()) {
+                return null;    
+            } else {
+                Spot spot = availableSpots.pop();
+                spotsInUse.put(vehicle.vehicleNumber, spot);
+                return new Ticket(spot, vehicle.vehicleNumber);
+            }            
         }
         
         return null;
     }
     
-    public boolean exitVehicle(Ticket ticket, Vehicle vehicle) {
-        Stack<Spot> stack = availableSpots.get(vehicle.type);
-    }
-    
-//     private boolean sizeMatched(Size vehicle, Size spot) {
-//         return (vehicle.width + 2) < spot.width && (vehicle.length + 2) < spot.length;
-//     }
-    
+    public boolean exitVehicle(Vehicle vehicle, PaymentMethod method, Ticket ticket) {
+        boolean success = method.makePayment(calculatePrice(ticket));
+        
+        if(success) {
+            Spot spot = spotsInUse.remove(vehicle.vehicleNumber);
+            stacks.get(vehicle.size).push(spot);
+        }
+    }    
 }
 
 class Vehicle {
     String vehicleNumber;
-    VehicleType type;
+    Size size;
 }
 
-enum VehicleType {
-    CAR, TRUCK, BUS
+enum Size {
+    SMALL, MED, LARGE, XLARGE
 }
 
 class Spot {
-    int code;
-    int floor;
-    Set<VehicleType> types; 
-    
-    public Spot(int code, int floor, Size size, Set<VehicleType> types) {
-        this.code = code;
-        this.floor = floor;
-        this.size = size;
-        this.types = types; 
-    }
+    Long id;
+    Size size;
 }
 
 class Ticket {
-    Spot spot;
+    Long spotId;
     String vehicleNumber;
+    double price;
+    Date createdAt;
     
     public Ticket(Spot spot, String vehicleNumber) {
         ....
