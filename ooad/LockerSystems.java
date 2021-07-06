@@ -9,7 +9,7 @@ class LockerSystems {
 
 class UsersRepo {
 	Map<String, User> users = new HashMap<>();
-	
+    
 	public User findUser(String registrationId) {
 		return users.get(registrationId);
 	}
