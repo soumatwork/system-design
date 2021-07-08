@@ -2,31 +2,20 @@ class Elevator {
     int currentFloor = 0;
     Direction currentDirection = Direction.UP;
     State currentState = State.IDLE;
-
     
-    //jobs which are being processed
-    private Set<Request> currentJobs = new TreeSet<>();
-    /**
-     * up jobs which cannot be processed now so put in pending queue
-     */
-    private Set<Request> upPendingJobs = new TreeSet<>();
-    /**
-     * down jobs which cannot be processed now so put in pending queue
-     */
-    private Set<Request> downPendingJobs = new TreeSet<>();
+    private TreeSet<Request> currentJobs = new TreeSet<>();
+    private TreeSet<Request> upPendingJobs = new TreeSet<>();
+    private TreeSet<Request> downPendingJobs = new TreeSet<>();
 
     public void startElevator() {
         while (true) {
-
             if (!currentJobs.isEmpty()) {
-
                 if (currentDirection == Direction.UP) {
                     Request request = currentJobs.pollFirst();
                     processUpRequest(request);
 
                     if (currentJobs.isEmpty()) {
                         addPendingDownJobsToCurrentJobs();
-
                     }
 
                 }
@@ -53,8 +42,6 @@ class Elevator {
             }
         }
 
-        // The elevator is now on the floor where the person has requested it i.e. source floor. User can enter and go to the destination floor.
-
         startFloor = currentFloor;
 
         for (int i = startFloor; i <= request.destinationFloor; i++) {
@@ -68,7 +55,6 @@ class Elevator {
     }
 
     private void processDownRequest(Request request) {
-
         int startFloor = currentFloor;
 
         if (startFloor < request.externalRequest.sourceFloor) {
@@ -124,7 +110,7 @@ class Elevator {
 
     private void addPendingDownJobsToCurrentJobs() {
         if (!downPendingJobs.isEmpty()) {
-            currentJobs = downPendingJobs;
+            currentJobs.add(downPendingJobs.pollFirst());
             currentDirection = Direction.DOWN;
 
         } else {
@@ -135,7 +121,7 @@ class Elevator {
 
     private void addPendingUpJobsToCurrentJobs() {
         if (!upPendingJobs.isEmpty()) {
-            currentJobs = upPendingJobs;
+            currentJobs.add(upPendingJobs.pollFirst());
             currentDirection = Direction.UP;
         } else {
             currentState = State.IDLE;
@@ -221,12 +207,13 @@ class Request implements Comparable<Request> {
 
     @Override
     public int compareTo(Request req) {
-        if (this.destinationFloor == req.destinationFloor)
+        if (this.destinationFloor == req.destinationFloor) {
             return 0;
-        else if (this.destinationFloor > req.destinationFloor)
+        } else if (this.destinationFloor > req.destinationFloor) {
             return 1;
-        else
+        } else {
             return -1;
+        }
     }
 }
 
