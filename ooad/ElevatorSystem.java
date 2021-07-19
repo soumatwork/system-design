@@ -66,8 +66,9 @@ class Elevator implements Runnable {
                 
                 for(int floor: keys) {
                     List<Request> requests = queues.get(floor);
-                    
-                    for(Iterator i = requests.iterator(); i.hasNext();) {
+                    Iterator i = requests.iterator();
+                        
+                    if(i.hasNext()) {
                         Request request = i.remove();
                         move(request.from);
                         
@@ -77,7 +78,9 @@ class Elevator implements Runnable {
                         } else {
                             internal.add(-1 * request.to);
                             currentState = State.DOWN;                            
-                        }                       
+                        }
+                        
+                        break;
                     }
                 }
             }
