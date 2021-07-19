@@ -43,32 +43,46 @@ class Elevator implements Runnable {
     
     public void run() {
         while (true) {
-            List<Request> requests = queues.get(currentFloor);
-            
-            for(Iterator i = requests.iterator(); i.hasNext();) {
-                Request request = i.next();
+            if(currentState == State.UP || currentState == State.DOWN) {
+                List<Request> requests = queues.get(currentFloor);
+
+                for(Iterator i = requests.iterator(); i.hasNext();) {
+                    Request request = i.next();
+
+                    if(currentState == State.UP) {
+                        if(request.to > currentFloor) {
+                            internal.add(request.to);
+                            i.remove();
+                        }
+                    } else if (currentState == State.DOWN) {
+                        if(request.to < currentFloor) {
+                            internal.add(-1 * request.to);
+                            i.remove();
+                        }
+                    }
+                }                
+            } else {
+                Set<Integer> keys = queues.keySet();
                 
-                if(currentState == State.UP) {
-                    if(request.to > currentFloor) {
-                        internal.add(request.to);
-                        i.remove();
+                for(int floor: keys) {
+                    List<Request> requests = queues.get(floor);
+                    
+                    for(Iterator i = requests.iterator(); i.hasNext();) {
+                        Request request = i.next();
+                        
+                        if(request.from < currentFloor) {
+                            internal.add(-1 * request.from);
+                            internal.add(-1 * request.to);
+                        } else {
+                            internal.add(request.from);
+                            internal.add(request.to);
+                        }
+                        
+                        i.remove();                        
                     }
-                } else if (currentState == State.DOWN) {
-                    if(request.to < currentFloor) {
-                        internal.add(-1 * request.to);
-                        i.remove();
-                    }
-                } else {
-                    if(request.toFloor < currentFloor) {
-                        currentState = State.DOWN;
-                        internal.add(-1 * request.to);
-                    } else {
-                        currentState = State.UP;
-                        internal.add(request.to);
-                    }
-                    i.remove();
                 }
             }
+
             
             if(internal.isEmpty()) {
                  currentState = State.IDLE;
@@ -79,6 +93,7 @@ class Elevator implements Runnable {
     }
     
     public void move(int toFloor) {
+        currentStatus = toFloor > currentFloor ? State.UP : State.DOWN;
         currentFloor = toFloor;
     }
 }
