@@ -1,13 +1,15 @@
 class ElevatorSystem {
     List<Elevator> elevators = new ArrayList<>();
-    Map<Integer, LinkedHashSet<Request>> queues = new LinkedHashMap<>();
+    Map<Integer, LinkedHashSet<Request>> queues = Collections.synchronizedMap();
     int capacity;
+    int floors;
     
     public ElevatorSystem(int capacity, int floors) {
         this.capacity = capacity;
+        this.floors = floors;
         
         for(int i = 0; i < capacity; i ++) {
-            elevators.add(new Elevator());
+            elevators.add(new Elevator(queues));
         }
         
         for(int i = 0; i < floors; i ++) {
@@ -16,60 +18,68 @@ class ElevatorSystem {
     }
     
     public void placeRequest(Request request) {
-       queues.get(request.toFloor).add(request); 
+       queues.get(request.from).add(request); 
     }
 }
 
 class Request {
-    int fromFloor;
-    int toFloor;
+    int from;
+    int to;
     
-    public Request(int fromFloor, int toFloor) {
+    public Request(int from, int to) {
         ...
     }
 }
 
-class Elevator {
-    int floors = 0;
+class Elevator implements Runnable {
     int currentFloor = 0;
     State currentState = State.IDLE;
     PriorityQueue<Integer> internal = new PriorityQueue<>();
     Map<Integer, LinkedHashSet<Request>> queues = null;
     
-    public Elevator(Map<Integer, LinkedHashSet<Request>> queues, int floors) {
+    public Elevator(Map<Integer, LinkedHashSet<Request>> queues) {
         this.queues = queues;
-        this.floors = floors;
     }
     
-    public void startElevator() {
+    public void run() {
         while (true) {
             LinkedHashSet<Request> requests = queues.get(currentFloor);
-                    
-            for(Request request: requests) {
+            
+            for(Iterator i = requests.iterator(); i.hasNext();) {
+                Request request = i.next();
+                
                 if(currentState == State.UP) {
-                    if(request.toFloor >= currentFloor) {
-                        internal.add(request.toFloor);
+                    if(request.to > currentFloor) {
+                        internal.add(request.to);
+                        i.remove();
                     }
                 } else if (currentState == State.DOWN) {
-                    if(request.toFloor <= currentFloor) {
-                        internal.add(request.toFloor);
+                    if(request.to < currentFloor) {
+                        internal.add(-1 * request.to);
+                        i.remove();
                     }
                 } else {
-                    if(request.toFloor <= currentFloor) {
+                    if(request.toFloor < currentFloor) {
                         currentState = State.DOWN;
+                        internal.add(-1 * request.to);
                     } else {
                         currentState = State.UP;
+                        internal.add(request.to);
                     }
-                    internal.add(request.toFloor);
+                    i.remove();
                 }
             }
             
             if(internal.isEmpty()) {
                  currentState = State.IDLE;
             } else {
-                move(internal.pop());
+                move(Math.abs(internal.pop()));
             }
         }
+    }
+    
+    public void move(int toFloor) {
+        currentFloor = toFloor;
     }
 }
 
