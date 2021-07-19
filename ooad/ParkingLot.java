@@ -17,68 +17,18 @@ class ParkingLot {
     }
     
     private Ticket enterVehicle(Vehicle vehicle) {
-        if(vehicle.size == SMALL) {
-            Stack<Spot> availableSpots = stacks.get(SMALL);
-            
-            if(availableSpots.isEmpty()) {
-              availableSpots = stacks.get(MED);  
+        List<Size> sizes = Arrays.asList(Size.SMALL, Size.MED, Size.LARGE, Size.XLARGE);
+        
+        for(Size size: sizes) {
+            if(vehicle.size.sizeId < size.sizeId) {
+                Stack<Spot> availableSpots = stacks.get(vehicle.size);
+                
+                if(!availableSpots.isEmpty()) {
+                    Spot spot = availableSpots.pop();
+                    spotsInUse.put(vehicle.vehicleNumber, spot);
+                    return new Ticket(spot, vehicle.vehicleNumber);
+                }
             }
-            if(availableSpots.isEmpty()) {
-              availableSpots = stacks.get(LARGE);  
-            }
-            if(availableSpots.isEmpty()) {
-              availableSpots = stacks.get(XLARGE);  
-            }
-            
-            if(availableSpots.isEmpty()) {
-                return null;    
-            } else {
-                Spot spot = availableSpots.pop();
-                spotsInUse.put(vehicle.vehicleNumber, spot);
-                return new Ticket(spot, vehicle.vehicleNumber);
-            }
-            
-        } else if (vehicle.size == MED) {
-            Stack<Spot> availableSpots = stacks.get(MED);
-            
-            if(availableSpots.isEmpty()) {
-              availableSpots = stacks.get(LARGE);  
-            }
-            if(availableSpots.isEmpty()) {
-              availableSpots = stacks.get(XLARGE);  
-            }
-            
-            if(availableSpots.isEmpty()) {
-                return null;    
-            } else {
-                Spot spot = availableSpots.pop();
-                spotsInUse.put(vehicle.vehicleNumber, spot);
-                return new Ticket(spot, vehicle.vehicleNumber);
-            }
-        } else if (vehicle.size == LARGE) {
-            Stack<Spot> availableSpots = stacks.get(LARGE);
-            
-            if(availableSpots.isEmpty()) {
-              availableSpots = stacks.get(XLARGE);  
-            }
-            
-            if(availableSpots.isEmpty()) {
-                return null;    
-            } else {
-                Spot spot = availableSpots.pop();
-                spotsInUse.put(vehicle.vehicleNumber, spot);
-                return new Ticket(spot, vehicle.vehicleNumber);
-            }
-        } else {
-            Stack<Spot> availableSpots = stacks.get(XLARGE);
-            
-            if(availableSpots.isEmpty()) {
-                return null;    
-            } else {
-                Spot spot = availableSpots.pop();
-                spotsInUse.put(vehicle.vehicleNumber, spot);
-                return new Ticket(spot, vehicle.vehicleNumber);
-            }            
         }
         
         return null;
@@ -100,7 +50,12 @@ class Vehicle {
 }
 
 enum Size {
-    SMALL, MED, LARGE, XLARGE
+    SMALL(1), MED(2), LARGE(3), XLARGE(4);
+    int sizeId;
+    
+    Size(int sizeId) {
+        this.sizeId = sizeId;
+    }
 }
 
 class Spot {
