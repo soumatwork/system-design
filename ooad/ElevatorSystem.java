@@ -69,15 +69,16 @@ class Elevator implements Runnable {
                     
                     for(Iterator i = requests.iterator(); i.hasNext();) {
                         Request request = i.next();
+                        move(request.from);
                         
-                        if(request.from < currentFloor) {
-                            internal.add(-1 * request.from);
-                            internal.add(-1 * request.to);
-                        } else {
-                            internal.add(request.from);
+                        if(request.to > currentFloor) {
                             internal.add(request.to);
+                            currentState = State.UP;
+                        } else {
+                            internal.add(-1 * request.to);
+                            currentState = State.DOWN;                            
                         }
-                        
+
                         i.remove();                        
                     }
                 }
@@ -92,9 +93,8 @@ class Elevator implements Runnable {
         }
     }
     
-    public void move(int toFloor) {
-        currentStatus = toFloor > currentFloor ? State.UP : State.DOWN;
-        currentFloor = toFloor;
+    public void move(int to) {
+        currentFloor = to;
     }
 }
 
