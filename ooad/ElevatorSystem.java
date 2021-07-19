@@ -1,6 +1,6 @@
 class ElevatorSystem {
     List<Elevator> elevators = new ArrayList<>();
-    Map<Integer, LinkedHashSet<Request>> queues = Collections.synchronizedMap();
+    Map<Integer, List<Request>> queues = Collections.synchronizedMap();
     int capacity;
     int floors;
     
@@ -13,7 +13,7 @@ class ElevatorSystem {
         }
         
         for(int i = 0; i < floors; i ++) {
-            queues.put(i + 1, new LinkedHashSet<>());
+            queues.put(i + 1, new LinkedList<>());
         }
     }
     
@@ -35,15 +35,15 @@ class Elevator implements Runnable {
     int currentFloor = 0;
     State currentState = State.IDLE;
     PriorityQueue<Integer> internal = new PriorityQueue<>();
-    Map<Integer, LinkedHashSet<Request>> queues = null;
+    Map<Integer, List<Request>> queues = null;
     
-    public Elevator(Map<Integer, LinkedHashSet<Request>> queues) {
+    public Elevator(Map<Integer, List<Request>> queues) {
         this.queues = queues;
     }
     
     public void run() {
         while (true) {
-            LinkedHashSet<Request> requests = queues.get(currentFloor);
+            List<Request> requests = queues.get(currentFloor);
             
             for(Iterator i = requests.iterator(); i.hasNext();) {
                 Request request = i.next();
