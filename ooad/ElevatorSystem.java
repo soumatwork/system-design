@@ -84,7 +84,7 @@ class Elevator implements Runnable {
 
             
             if(internal.isEmpty()) {
-                 currentState = State.IDLE;
+                currentState = State.IDLE;
             } else {
                 move(Math.abs(internal.pop()));
             }
