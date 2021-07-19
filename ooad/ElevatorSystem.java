@@ -1,283 +1,78 @@
-class Elevator {
-    int currentFloor = 0;
-    Direction currentDirection = Direction.UP;
-    State currentState = State.IDLE;
+class ElevatorSystem {
+    List<Elevator> elevators = new ArrayList<>();
+    Map<Integer, LinkedHashSet<Request>> queues = new LinkedHashMap<>();
+    int capacity;
     
-    private TreeSet<Request> currentJobs = new TreeSet<>();
-    private TreeSet<Request> upPendingJobs = new TreeSet<>();
-    private TreeSet<Request> downPendingJobs = new TreeSet<>();
-
-    public void startElevator() {
-        while (true) {
-            if (!currentJobs.isEmpty()) {
-                if (currentDirection == Direction.UP) {
-                    Request request = currentJobs.pollFirst();
-                    processUpRequest(request);
-
-                    if (currentJobs.isEmpty()) {
-                        addPendingDownJobsToCurrentJobs();
-                    }
-
-                }
-                if (currentDirection == Direction.DOWN) {
-                    Request request = currentJobs.pollLast();
-                    processDownRequest(request);
-
-                    if (currentJobs.isEmpty()) {
-                        addPendingUpJobsToCurrentJobs();
-                    }
-
-                }
-            }
+    public ElevatorSystem(int capacity, int floors) {
+        this.capacity = capacity;
+        
+        for(int i = 0; i < capacity; i ++) {
+            elevators.add(new Elevator());
+        }
+        
+        for(int i = 0; i < floors; i ++) {
+            queues.put(i + 1, new LinkedHashSet<>());
         }
     }
-
-
-    private void processUpRequest(Request request) {
-        int startFloor = currentFloor;
-
-        if (startFloor < request.sourceFloor) {
-            for (int i = startFloor; i <= request.sourceFloor; i++) {                
-                currentFloor = i;
-            }
-        }
-
-        startFloor = currentFloor;
-
-        for (int i = startFloor; i <= request.destinationFloor; i++) {
-            currentFloor = i;
-
-            if (checkIfNewJobCanBeProcessed(request)) {
-                break;
-            }
-        }
-
+    
+    public void placeRequest(Request request) {
+       queues.get(request.toFloor).add(request); 
     }
-
-    private void processDownRequest(Request request) {
-        int startFloor = currentFloor;
-
-        if (startFloor < request.externalRequest.sourceFloor) {
-            for (int i = startFloor; i <= request.sourceFloor; i++) {
-                currentFloor = i;
-            }
-        }
-
-        startFloor = currentFloor;
-
-        for (int i = startFloor; i >= request.destinationFloor; i--) {
-            currentFloor = i;
-
-            if (checkIfNewJobCanBeProcessed(request)) {
-                break;
-            }
-        }
-
-    }
-
-    private boolean checkIfNewJobCanBeProcessed(Request currentRequest) {
-        if (!currentJobs.isEmpty()) {
-
-            if (currentDirection == Direction.UP) {
-                Request request = currentJobs.pollFirst();
-                
-                if (request.destinationFloor < currentRequest.destinationFloor) {
-                    currentJobs.add(request);
-                    currentJobs.add(currentRequest);
-                    return true;
-                }
-
-                currentJobs.add(request);
-            }
-
-            if (currentDirection == Direction.DOWN) {
-                Request request = currentJobs.pollLast();
-
-                if (request.destinationFloor > currentRequest.destinationFloor) {
-                    currentJobs.add(request);
-                    currentJobs.add(currentRequest);
-                    return true;
-                }
-
-                currentJobs.add(request);
-
-            }
-
-        }
-
-        return false;
-    }
-
-    private void addPendingDownJobsToCurrentJobs() {
-        if (!downPendingJobs.isEmpty()) {
-            currentJobs.add(downPendingJobs.pollFirst());
-            currentDirection = Direction.DOWN;
-
-        } else {
-            currentState = State.IDLE;
-        }
-
-    }
-
-    private void addPendingUpJobsToCurrentJobs() {
-        if (!upPendingJobs.isEmpty()) {
-            currentJobs.add(upPendingJobs.pollFirst());
-            currentDirection = Direction.UP;
-        } else {
-            currentState = State.IDLE;
-        }
-
-    }
-
-    public void addJob(Request request) {
-        if (currentState == State.IDLE) {
-            currentState = State.MOVING;
-            currentDirection = request.directionToGo;
-            currentJobs.add(request);
-
-        } else if (currentState == State.MOVING) {
-
-            if (request.directionToGo != currentDirection) {
-                addtoPendingJobs(request);
-
-            } else if (request.externalRequest.directionToGo == currentDirection) {
-                if (currentDirection == Direction.UP && request.destinationFloor < currentFloor) {
-                    addtoPendingJobs(request);
-
-                } else if (currentDirection == Direction.DOWN && request.destinationFloor > currentFloor) {
-                    addtoPendingJobs(request);
-
-                } else {
-                    currentJobs.add(request);
-                }
-
-            }
-
-        }
-
-    }
-
-    public void addtoPendingJobs(Request request) {
-        if (request.directionToGo == Direction.UP) {
-            upPendingJobs.add(request);
-
-        } else {
-            downPendingJobs.add(request);
-        }
-    }
-
 }
 
-class ProcessJobWorker implements Runnable {
-
-    private Elevator elevator;
-
-    ProcessJobWorker(Elevator elevator) {
-        this.elevator = elevator;
+class Request {
+    int fromFloor;
+    int toFloor;
+    
+    public Request(int fromFloor, int toFloor) {
+        ...
     }
+}
 
-    @Override
-    public void run() {
-        /**
-         * start the elevator
-         */
-        elevator.startElevator();
+class Elevator {
+    int floors = 0;
+    int currentFloor = 0;
+    State currentState = State.IDLE;
+    PriorityQueue<Integer> internal = new PriorityQueue<>();
+    Map<Integer, LinkedHashSet<Request>> queues = null;
+    
+    public Elevator(Map<Integer, LinkedHashSet<Request>> queues, int floors) {
+        this.queues = queues;
+        this.floors = floors;
     }
-
+    
+    public void startElevator() {
+        while (true) {
+            LinkedHashSet<Request> requests = queues.get(currentFloor);
+                    
+            for(Request request: requests) {
+                if(currentState == State.UP) {
+                    if(request.toFloor >= currentFloor) {
+                        internal.add(request.toFloor);
+                    }
+                } else if (currentState == State.DOWN) {
+                    if(request.toFloor <= currentFloor) {
+                        internal.add(request.toFloor);
+                    }
+                } else {
+                    if(request.toFloor <= currentFloor) {
+                        currentState = State.DOWN;
+                    } else {
+                        currentState = State.UP;
+                    }
+                    internal.add(request.toFloor);
+                }
+            }
+            
+            if(internal.isEmpty()) {
+                 currentState = State.IDLE;
+            } else {
+                move(internal.pop());
+            }
+        }
+    }
 }
 
 enum State {
-    MOVING, STOPPED, IDLE
-}
-
-enum Direction {
-    UP, DOWN
-}
-
-class Request implements Comparable<Request> {
-    int destinationFloor;
-    int sourceFloor;
-    Direction directionToGo;
-    
-    public Request(int destinationFloor, int sourceFloor, Direction directionToGo) {
-        this.destinationFloor = destinationFloor;
-        this.sourceFloor = sourceFloor;
-        this.directionToGo = directionToGo;
-    }
-
-    @Override
-    public int compareTo(Request req) {
-        if (this.destinationFloor == req.destinationFloor) {
-            return 0;
-        } else if (this.destinationFloor > req.destinationFloor) {
-            return 1;
-        } else {
-            return -1;
-        }
-    }
-}
-
-class AddJobWorker implements Runnable {
-
-    private Elevator elevator;
-    private Request request;
-
-    AddJobWorker(Elevator elevator, Request request) {
-        this.elevator = elevator;
-        this.request = request;
-    }
-
-    @Override
-    public void run() {
-
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        elevator.addJob(request);
-    }
-
-}
-
-
-public class TestElevator {
-    public static void main(String args[]) {
-        Elevator elevator = new Elevator();
-        
-                /**
-         * Thread for starting the elevator
-         */
-        ProcessJobWorker processJobWorker = new ProcessJobWorker(elevator);
-        
-        Thread t2 = new Thread(processJobWorker);
-        t2.start();
-
-        try {
-            Thread.sleep(300);
-        } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
-        //person wants to go in up direction from source floor 0
-        ExternalRequest er = new ExternalRequest(Direction.UP, 0);
-        
-        //the destination floor is 5
-        InternalRequest ir = new InternalRequest(5);
-        Request request1 = new Request(ir, er);
-
-        /**
-         * Pass job to the elevator
-         */
-        new Thread(new AddJobWorker(elevator, request1)).start();
-
-        try {
-            Thread.sleep(3000);
-        } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }        
-    }
+    IDLE,UP, DOWN;
 }
