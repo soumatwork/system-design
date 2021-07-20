@@ -1,9 +1,15 @@
 class LockerSystems {
-    List<LockerSystem> systems;
+    Map<String, List<LockerSystem>> lockerSystems = new ArrayList<>();
     
-    public LockerSystem findLocker(Shipment shipment) {
-        //find locker system based on location;
-        // you could use QuadTree to store 
+    public LockerSystems() {
+    }
+    
+    public List<LockerSystem> findLocker(Shipment shipment) {
+        return lockerSystems.get(shipment.postcode);
+    }
+    
+    public void addLocker(LockerSystem lockerSystem, String postcode) {
+        lockerSystems.put(postcode, lockerSystem);
     }
 }
 
